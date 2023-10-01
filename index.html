@@ -1,0 +1,530 @@
+<!-- Styles -->
+<style>
+  #chartdiv {
+    width: 100%;
+    max-width: 100%;
+    height: 550px;
+  }
+  h1 {
+
+    font-family: monospace;
+
+  }
+</style>
+
+ 
+
+<!-- Resources -->
+<script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+<script src="https://cdn.amcharts.com/lib/5/hierarchy.js"></script>
+<script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+
+<!-- Chart code -->
+<script>
+  var years = [];
+  var defaultYear = 2018;
+  var allYearsData;
+  var currentYearData;
+  var series; // Declare the series variable
+  const featureServiceUrl = "https://services8.arcgis.com/Usi0jGQwMmBUpFjr/arcgis/rest/services/kapaciteti_smjestaj_turista/FeatureServer/2";
+
+  // Parametri za query upit
+  const params = {
+    where: "1=1",
+    outFields: "*",
+    f: "json",
+  };
+
+  const queryParams = new URLSearchParams(params);
+  const queryUrl = `${featureServiceUrl}/query?${queryParams.toString()}`;
+
+ fetch(queryUrl).then((response) => {
+      if (!response.ok) {
+        throw new Error(`Network response was not ok: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((datas) => {
+      allYearsData = datas.features.map((feature) => feature.attributes);
+      allYearsData.forEach((element) => {
+        if (!years.includes(element.Godina.slice(0, -1))) {
+          years.push(element.Godina.slice(0, -1));
+        }
+      });
+      // Dinamcki kreiranje buttona
+      const buttonContainer = document.getElementById("button-holder");
+      for (let i = 0; i < years.length; i++) {
+        const button = document.createElement("button");
+        button.textContent = years[i];
+        button.value = years[i];
+        button.addEventListener("click", function () {
+          initGraph(years[i]);
+        });
+        buttonContainer.appendChild(button);
+      }
+      currentYearData = allYearsData.filter(
+        (item) => item.Godina == defaultYear + "."
+      );
+      // Inicijalizacija grafa sa defaultom godinom
+      initGraph(defaultYear);
+    });
+
+  am5.ready(function () {
+
+    // Create root element
+    var root = am5.Root.new("chartdiv");
+    // Set themes
+    root.setThemes([am5themes_Animated.new(root)]);
+    // Prvo stvorimo prazno polje podataka koje ćemo napuniti ovisno o godini
+    var data = {
+      value: 0,
+      children: [],
+    };
+
+    // Create wrapper container
+    var container = root.container.children.push(
+
+      am5.Container.new(root, {
+        width: am5.percent(100),
+        height: am5.percent(100),
+        layout: root.verticalLayout,
+      })
+    );
+
+    // Create series
+    series = container.children.push(
+      am5hierarchy.ForceDirected.new(root, {
+        singleBranchOnly: false,
+        downDepth: 2,
+        topDepth: 1,
+        initialDepth: 1,
+        valueField: "value",
+        categoryField: "name",
+        childDataField: "children",
+        idField: "name",
+        linkWithField: "linkWith",
+        manyBodyStrength: -10,
+        centerStrength: 0.8,
+      })
+    );
+    series.get("colors").setAll({
+      step: 2,
+    });
+    series.links.template.set("strength", 0.5);
+    // Set the initial data
+    series.data.setAll([data]);
+    series.set("selectedDataItem", series.dataItems[0]);
+    // Make stuff animate on load
+    series.appear(1000, 100);
+  });
+  function initGraph(year) {
+
+    // Ovisno o odabranoj godini dohvacamo podatke za tu godinu, dodajemo . jer je godina zapisana kao string npr. 2021.
+    let filteredData = allYearsData.filter((item) => item.Godina == year + ".");
+    console.log(filteredData);
+    if (filteredData.length > 0) {
+      // Stvorimo strukturu koja nam treba
+      var data = {
+        value: 0,
+        children: [
+          {
+            name: "Hoteli i sličan smještaj",
+            children: [
+              {
+                name: "Objekti",
+                value: filteredData[0].Objekti,
+              },
+              {
+                name: "Sobe",
+                value: filteredData[0].Sobe,
+              },
+              {
+                name: "Apartmani",
+                value: filteredData[0].Apartmani,
+              },
+            ],
+          },
+          {
+            name: "Apartmani",
+            children: [
+
+              {
+                name: "Objekti",
+                value: filteredData[1].Objekti,
+              },
+              {
+                name: "Sobe",
+                value: filteredData[1].Sobe,
+
+              },
+              {
+                name: "Apartmani",
+                value: filteredData[1].Apartmani,
+
+              },
+
+            ],
+
+          },
+
+ 
+
+          {
+            name: "Hosteli",
+            children: [
+              {
+
+                name: "Objekti",
+                value: filteredData[2].Objekti,
+
+              },
+              {
+
+                name: "Sobe",
+                value: filteredData[2].Sobe,
+
+              },
+
+            ],
+
+          },
+
+        ],
+
+      };
+
+ 
+
+      // Ažurirati graf sa novim podacima
+
+ 
+
+      series.data.setAll([data]);
+
+ 
+
+      document.getElementById("title").innerHTML = year;
+
+    } else {
+
+      //slučaj da nema podataka za tu godinu
+
+ 
+
+      alert("No data for the selected year.");
+
+    }
+
+  }
+
+</script>
+
+ 
+
+<!-- HTML -->
+
+ 
+
+<h1 id="title"></h1>
+
+ 
+
+<div id="chartdiv"></div>
+
+ 
+
+<div id="button-holder"></div> 
+
+ 	<!DOCTYPE html>
+ 	<html>
+ 	<head>
+ 	<title>Fetch Data from Feature Service</title>
+ 	 
+ 	<style>
+ 	#chartdiv {
+ 	width: 100%;
+ 	height: 600px;
+ 	}
+ 	 
+ 	#chartLabels {
+ 	display: flex;
+ 	justify-content: space-around;
+ 	font-weight: light;
+ 	font-size: large;
+ 	margin-bottom: 10px;
+ 	}
+ 	#labelFemale {
+ 	color: rgb(133, 169, 227);
+ 	}
+ 	#labelMale {
+ 	color: rgb(133, 197, 227);
+ 	}
+ 	</style>
+ 	 
+ 	<script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+ 	<script src="https://cdn.amcharts.com/lib/5/xy.js"></script>
+ 	<script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+ 	</head>
+ 	 
+ 	<body>
+ 	<h1 id="title"></h1>
+ 	 
+ 	<!-- Add the chart labels container -->
+ 	<div id="chartLabels">
+ 	<span id="labelMale">Muškarci</span>
+ 	<span id="labelFemale">Žene</span>
+ 	</div>
+ 	 
+ 	<!-- Add the chart container -->
+ 	<div id="chartdiv"></div>
+ 	 
+ 	<div id="button-holder"></div>
+ 	 
+ 	<script>
+ 	function getAllAgeCategories() {
+ 	const categories = [
+ 	"85+",
+ 	"80-84",
+ 	"75-79",
+ 	"70-74",
+ 	"65-69",
+ 	"60-64",
+ 	"55-59",
+ 	"50-54",
+ 	"45-49",
+ 	"40-44",
+ 	"35-39",
+ 	"30-34",
+ 	"25-29",
+ 	"20-24",
+ 	"15-19",
+ 	"10-14",
+ 	"5-9",
+ 	"0-4",
+ 	];
+ 	return categories;
+ 	}
+ 	 
+ 	const featureServiceUrl =
+ 	"https://services8.arcgis.com/Usi0jGQwMmBUpFjr/ArcGIS/rest/services/Broj_stan_starost_i_spol/FeatureServer/3";
+ 	 
+ 	// Parameters for the query operation
+ 	const params = {
+ 	where: "1=1",
+ 	outFields: "*",
+ 	f: "json",
+ 	};
+ 	 
+ 	const queryParams = new URLSearchParams(params);
+ 	const queryUrl = `${featureServiceUrl}/query?${queryParams.toString()}`;
+ 	 
+ 	let currentYearData; // Variable to store the currently displayed year data
+ 	let chart; // Variable to store the amCharts chart instance
+ 	let yAxis;
+ 	let years = []; //Polje mogućih godina
+ 	let allYearsData;
+ 	 
+ 	// Fetch the data using the Fetch API
+ 	fetch(queryUrl)
+ 	.then((response) => {
+ 	if (!response.ok) {
+ 	throw new Error(`Network response was not ok: ${response.status}`);
+ 	}
+ 	return response.json();
+ 	})
+ 	.then((datas) => {
+ 	allYearsData = datas.features.map((feature) => feature.attributes);
+ 	 
+ 	console.log(allYearsData);
+ 	//Dohvati sve godine koje postoje, slice služi da se makne . sa kraja broja
+ 	allYearsData.forEach((element) => {
+ 	if (years.includes(element.Godina.slice(0, -1))) {
+ 	} else {
+ 	years.push(element.Godina.slice(0, -1));
+ 	}
+ 	});
+ 	 
+ 	// Dinamicko stvaranje buttona
+ 	const buttonContainer = document.getElementById("button-holder");
+ 	 
+ 	for (let i = 0; i < years.length; i++) {
+ 	// Kreira button
+ 	const button = document.createElement("button");
+ 	 
+ 	// Postavit tekst i vrijednost buttona
+ 	button.textContent = years[i];
+ 	button.value = years[i];
+ 	 
+ 	//Postavit onclick vrijednost da se poziva promjena podataka ovisno o godini
+ 	button.setAttribute("onclick", `switchToYear(${years[i]})`);
+ 	 
+ 	// Dodati button na div htmla
+ 	buttonContainer.appendChild(button);
+ 	}
+ 	// Convert the fetched data to the same structure as the amCharts data
+ 	const transformedData = allYearsData.map((item) => ({
+ 	age: item.Starost,
+ 	male: -item.Br_muskarci,
+ 	female: item.Br_zene,
+ 	}));
+ 	transformedData.reverse();
+ 	 
+ 	currentYearData = transformedData;
+ 	 
+ 	// amCharts Code
+ 	am5.ready(function () {
+ 	// Create root element
+ 	var root = am5.Root.new("chartdiv");
+ 	 
+ 	// Set themes
+ 	root.setThemes([am5themes_Animated.new(root)]);
+ 	 
+ 	// Create chart
+ 	chart = root.container.children.push(
+ 	am5xy.XYChart.new(root, {
+ 	panX: false,
+ 	panY: false,
+ 	wheelX: "panX",
+ 	wheelY: "zoomX",
+ 	layout: root.verticalLayout,
+ 	arrangeTooltips: false,
+ 	paddingTop: 40, // Add margin at the top for labels
+ 	})
+ 	);
+ 	 
+ 	// Use only absolute numbers
+ 	chart.getNumberFormatter().set("numberFormat", "#.#s");
+ 	 
+ 	// Add legend
+ 	var legend = chart.children.push(
+ 	am5.Legend.new(root, {
+ 	centerX: am5.p50,
+ 	x: am5.p50,
+ 	})
+ 	);
+ 	 
+ 	// Create axes
+ 	yAxis = chart.yAxes.push(
+ 	am5xy.CategoryAxis.new(root, {
+ 	categoryField: "age",
+ 	renderer: am5xy.AxisRendererY.new(root, {
+ 	inversed: true,
+ 	cellStartLocation: 0.1,
+ 	cellEndLocation: 0.9,
+ 	minGridDistance: 1,
+ 	}),
+ 	})
+ 	);
+ 	 
+ 	var xAxis = chart.xAxes.push(
+ 	am5xy.ValueAxis.new(root, {
+ 	renderer: am5xy.AxisRendererX.new(root, {
+ 	strokeOpacity: 0.1,
+ 	}),
+ 	})
+ 	);
+ 	 
+ 	// Add series
+ 	function createSeries(
+ 	field,
+ 	labelCenterX,
+ 	pointerOrientation,
+ 	rangeValue
+ 	) {
+ 	var series = chart.series.push(
+ 	am5xy.ColumnSeries.new(root, {
+ 	xAxis: xAxis,
+ 	yAxis: yAxis,
+ 	valueXField: field,
+ 	categoryYField: "age",
+ 	sequencedInterpolation: true,
+ 	clustered: false,
+ 	tooltip: am5.Tooltip.new(root, {
+ 	pointerOrientation: pointerOrientation,
+ 	labelText: "{categoryY}: {valueX}",
+ 	}),
+ 	})
+ 	);
+ 	 
+ 	series.columns.template.setAll({
+ 	height: am5.p100,
+ 	strokeOpacity: 0,
+ 	fillOpacity: 0.8,
+ 	});
+ 	 
+ 	series.appear();
+ 	 
+ 	var rangeDataItem = xAxis.makeDataItem({
+ 	value: rangeValue,
+ 	});
+ 	xAxis.createAxisRange(rangeDataItem);
+ 	rangeDataItem.get("grid").setAll({
+ 	strokeOpacity: 1,
+ 	stroke: series.get("stroke"),
+ 	});
+ 	 
+ 	return series;
+ 	}
+ 	 
+ 	// Store the references to the series in variables
+ 	maleSeries = createSeries("male", am5.p100, "right", -3);
+ 	femaleSeries = createSeries("female", 0, "left", 4);
+ 	 
+ 	// Add cursor
+ 	var cursor = chart.set(
+ 	"cursor",
+ 	am5xy.XYCursor.new(root, {
+ 	behavior: "zoomY",
+ 	})
+ 	);
+ 	cursor.lineY.set("forceHidden", true);
+ 	cursor.lineX.set("forceHidden", true);
+ 	 
+ 	// Make stuff animate on load
+ 	chart.appear(1000, 100);
+ 	 
+ 	switchToYear(2011); // Default year is 2011
+ 	});
+ 	})
+ 	.catch((error) => {
+ 	console.error("Error fetching data:", error);
+ 	});
+ 	 
+ 	// Function to switch data based on the selected year
+ 	function switchToYear(year) {
+ 	if (!currentYearData) return;
+ 	 
+ 	let filteredData;
+ 	 
+ 	years.forEach((element) => {
+ 	if (year == element) {
+ 	document.getElementById("title").innerHTML = year;
+ 	year = year + "."; //pretvaranje odabrane godine u string sa . na kraju jer se u servisu tako nalazi zapisano
+ 	tempData = allYearsData.filter((item) => item.Godina == year); //Filtriranje podataka po odabranoj godini
+ 	 
+ 	//Pretvaranje podataka u oblik čitljiv AmChartu
+ 	filteredData = tempData.map((item) => ({
+ 	age: item.Starost,
+ 	male: -item.Br_muskarci,
+ 	female: item.Br_zene,
+ 	}));
+ 	filteredData.reverse();
+ 	}
+ 	});
+ 	 
+ 	// Update the series data
+ 	maleSeries.data.setAll(filteredData);
+ 	femaleSeries.data.setAll(filteredData);
+ 	 
+ 	// Update the yAxis data
+ 	yAxis.data.setAll(filteredData);
+ 	 
+ 	// Redraw the chart
+ 	chart.setAll("forceRedraw", true);
+ 	}
+ 	</script>
+ 	</body>
+ 	</html>
+ 	 
+
+ 
